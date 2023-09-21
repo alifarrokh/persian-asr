@@ -1,0 +1,10 @@
+datasets
+transformers
+torchaudio
+librosa
+jiwer
+parsivar
+num2fawords
+mutagen
+ctc-segmentation
+matplotlib
