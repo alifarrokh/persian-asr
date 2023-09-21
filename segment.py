@@ -53,6 +53,7 @@ parser.add_argument(
 args = parser.parse_args()
 assert args.device in ["cuda", "cpu"], "Invalid value for device"
 assert not os.path.exists(args.output_dir), "Output directory already exists"
+assert os.path.isfile(args.metadata), "Input metadata does not exist"
 
 # load model
 vocabulary = get_vocab()
@@ -69,6 +70,7 @@ def output_frames(n_features):
 
 # Load metadata
 data = read_csv(args.metadata)
+base_input_dir = os.path.split(os.path.abspath(args.metadata))[0]
 
 # Create output directory
 os.mkdir(args.output_dir)
@@ -80,7 +82,8 @@ next_audio_number = 1
 for item in tqdm(data):
 
     # Load the speech file
-    original_speech_array, original_sample_rate = torchaudio.load(item['audio_path'])
+    audio_path = os.path.join(base_input_dir, item['audio_path'])
+    original_speech_array, original_sample_rate = torchaudio.load(audio_path)
     item['index_duration'] = original_speech_array.shape[1] / original_sample_rate
     original_speech_array = original_speech_array.squeeze().numpy()
 
@@ -148,7 +151,8 @@ for item in tqdm(data):
     item['index_duration'] = item['index_duration'] / log_probs.shape[0]
 
     # Load transcripts
-    item['text'] = read_lines(item['transcript_path'])
+    transcript_path = os.path.join(base_input_dir, item['transcript_path'])
+    item['text'] = read_lines(transcript_path)
     item['text_normal'] = normalize_text(item['text'])
 
     # CTC Segmentation config
