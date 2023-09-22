@@ -11,13 +11,15 @@ import numpy as np
 from scipy.special import softmax
 from tqdm import tqdm
 import librosa
+from librosa import get_duration
 import torch
 import torchaudio
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 from datasets.utils.logging import disable_progress_bar
+import matplotlib.pyplot as plt
 import ctc_segmentation as cs
 
-from utils import get_vocab, read_csv, read_lines, normalize_text
+from utils import get_vocab, read_csv, read_lines, normalize_text, format_duration
 from utils import write_output, determine_utterance_segments
 
 
@@ -75,6 +77,8 @@ base_input_dir = os.path.split(os.path.abspath(args.metadata))[0]
 # Create output directory
 os.mkdir(args.output_dir)
 res_transcript = os.path.join(args.output_dir, 'result.csv')
+res_report = os.path.join(args.output_dir, 'report.txt')
+duration_hist_path = os.path.join(args.output_dir, 'duration_hist.png')
 
 # Process each audio
 print('Segmenting audio files ...')
@@ -189,3 +193,31 @@ for item in tqdm(data):
         item['text'],
         args.threshold,
     )
+
+# Evaluate the result
+result_csv = read_csv(res_transcript, delimiter=' $ ')
+n_total = len(result_csv)
+n_success = sum(map(lambda l: l['audio_path'].endswith('.wav'), result_csv))
+success_rate = round(n_success / n_total * 100, 2)
+wavs = filter(lambda f: f.endswith('.wav'), os.listdir(args.output_dir))
+wavs = map(lambda f: os.path.join(args.output_dir, f), wavs)
+wavs = map(lambda p: get_duration(path=p), wavs)
+durations = list(wavs)
+total_duration = sum(durations)
+duration = format_duration(total_duration)
+
+# Write the report
+with open(res_report, 'w', encoding='utf-8') as report:
+    report.write(f'All Sentences: {n_total}\n')
+    report.write(f'Number of Audios: {n_success}\n')
+    report.write(f'Success Rate: {success_rate}%\n')
+    report.write(f'Total Duration: {duration}\n')
+
+# Plot duration histogram
+durations = np.array(durations)
+plt.figure(figsize=(14, 8))
+plt.hist(durations, bins=30)
+plt.title('Duration Histogram')
+plt.xlabel('Audio Duration (seconds)')
+plt.ylabel('Number of Audios')
+plt.savefig(duration_hist_path)

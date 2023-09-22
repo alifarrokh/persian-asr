@@ -130,3 +130,15 @@ def write_output(output, next_audio_number, output_dir, audio_path, speech_signa
                 next_audio_number += 1
     
     return next_audio_number
+
+
+def format_duration(total_duration):
+    unit = 'seconds'
+    if total_duration > 60:
+        total_duration /= 60
+        unit = 'minutes'
+    if total_duration > 60:
+        total_duration /= 60
+        unit = 'hours'
+    total_duration = round(total_duration, 2)
+    return f'{total_duration} {unit}'
