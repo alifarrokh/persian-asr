@@ -1,6 +1,8 @@
 # Persian CTC-Segmentation
 This repository facilitates constructing a Persian ASR (Automatic Speech Recognition) dataset by finding utterance alignments within large audio files. It uses CTC-segmentation algorithm ([Ludwig Kürzinger et al., 2020](https://arxiv.org/abs/2007.09127)) and a Persian ASR model trained with Connectionist Temporal Classification (CTC) to find the most probable alignment between a pair of text and speech. The ASR model includes a XLS-R representation learning model ([Alexis Conneau et al., 2020](https://arxiv.org/abs/2006.13979)) pre-trained on 53 languages using a contrastive self-supervised objective, and a linear layer which was trained on labeled Persian speech data. Since the XLS-R model has $O(n^2)$ space/time complexity, a chunking mechanism with overlapping chunks is used to reduce the spece/time complexity of the inference while keeping a proper context in the center of windows. This mechanism is specially essential when dealing with large audio files (few hours of speech).
 
+![Training an ASR model based on XLSR-53](https://github.com/alifarrokh/persian-ctc-segmentation/blob/master/images/XLSR.jpg?raw=true)
+
 # Installation & Usage
 ### 1. Install The Requirements
 ```
