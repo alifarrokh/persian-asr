@@ -1,3 +1,6 @@
+"""
+Helper functions foc Persian CTC Segmentation
+"""
 import json
 import math
 import os
@@ -6,13 +9,15 @@ import soundfile as sf
 
 
 def read_lines(file_path):
-    with open(file_path) as f:
+    """Read and strip lines in a given file"""
+    with open(file_path, encoding='utf-8') as f:
         lines = f.readlines()
         lines = [l.strip() for l in lines if l.strip()]
     return lines
 
 
 def read_csv(csv_path, delimiter=','):
+    """Read and convert a CSV file into a list of dicts"""
     lines = read_lines(csv_path)
     lines = list(map(lambda l: list(map(str.strip, l.split(delimiter))), lines))
     keys = lines[0]
@@ -24,13 +29,16 @@ def read_csv(csv_path, delimiter=','):
 
 
 def get_vocab():
-    vocab = json.load(open('vocab.json'))
+    """Load the vocabulary from file"""
+    with open('vocab.json', encoding='utf-8') as json_file:
+        vocab = json.load(json_file)
     vocab = sorted(list(vocab.items()), key=lambda x: x[1])
     vocab = list(map(lambda x: x[0], vocab))
     return vocab
 
 
 def normalize_text(transcript):
+    """Normalize the given transcript"""
     vocab = get_vocab()
     lines = map(lambda l: l.replace(' ', '|'), transcript)
     lines = map(lambda l: ''.join([c for c in l if c in vocab]).strip(), lines)
@@ -52,8 +60,7 @@ def _compute_time(index, align_type, timings):
     middle = (timings[index] + timings[index - 1]) / 2
     if align_type == "begin":
         return max(timings[index + 1] - 0.5, middle)
-    elif align_type == "end":
-        return min(timings[index - 1] + 0.5, middle)
+    return min(timings[index - 1] + 0.5, middle)
 
 
 def determine_utterance_segments(config, utt_begin_indices, char_probs, timings, text, char_list):
@@ -78,7 +85,8 @@ def determine_utterance_segments(config, utt_begin_indices, char_probs, timings,
         start_t = start / config.index_duration_in_seconds
         start_t_floor = math.floor(start_t)
 
-        # look for the left most blank symbol and split in the middle to fix start utterance segmentation
+        # look for the left most blank symbol and split in the middle
+        # to fix start utterance segmentation
         if char_list[start_t_floor] == config.char_list[config.blank]:
             start_blank = None
             j = start_t_floor - 1
@@ -96,7 +104,8 @@ def determine_utterance_segments(config, utt_begin_indices, char_probs, timings,
 
         end_t = int(round(end / config.index_duration_in_seconds))
 
-        # Compute confidence score by using the min mean probability after splitting into segments of L frames
+        # Compute confidence score by using the min mean probability
+        # after splitting into segments of L frames
         n = config.score_min_mean_over_L
         if end_t <= start_t:
             min_avg = min_prob
@@ -110,29 +119,43 @@ def determine_utterance_segments(config, utt_begin_indices, char_probs, timings,
     return segments
 
 
-def write_output(output, next_audio_number, output_dir, audio_path, speech_signal, sr, segments, text, th, delimiter='$'):
+def write_output(
+    output,
+    next_audio_number,
+    output_dir,
+    audio_path,
+    speech_signal,
+    sr,
+    segments,
+    text,
+    th,
+    delimiter='$'
+):
+    """Write segmentation result to a file"""
     d = f' {delimiter} '
-    
+
     if not os.path.exists(output):
         with open(output, 'w', encoding='utf-8') as outfile:
             outfile.write(f'original_audio_path{d}start{d}end{d}score{d}audio_path{d}text\n')
-    
+
     with open(output, 'a', encoding='utf-8') as outfile:
         for i, segment in enumerate(segments):
             start, end, score = segment
             audio_name = f'{next_audio_number}.wav'
             segment_audio_path = os.path.join(output_dir, audio_name) if score > th else 'INVALID'
-            outfile.write(f'{audio_path}{d}{start}{d}{end}{d}{score}{d}{segment_audio_path}{d}{text[i]}\n')
+            next_line = d.join([audio_path, start, end, score, segment_audio_path, text[i]])
+            outfile.write(f'{next_line}\n')
             if score > th:
                 start_index, end_index = int(start * sr), int(end * sr)
                 segment_signal = speech_signal[start_index:end_index]
                 sf.write(segment_audio_path, segment_signal, sr, subtype='PCM_24')
                 next_audio_number += 1
-    
+
     return next_audio_number
 
 
 def format_duration(total_duration):
+    """Convert seconds into a human-readable format"""
     unit = 'seconds'
     if total_duration > 60:
         total_duration /= 60
