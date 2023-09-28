@@ -14,7 +14,7 @@ This repository facilitates constructing a Persian ASR (Automatic Speech Recogni
 pip install -r requirements.txt
 ```
 
-### 2. Download The Model
+### 2. Download The Model Weights
 ```
 pip install gdown
 gdown 1JO_UmvZC-yDWxOfZl3TThpqGI1IQAfDW
@@ -38,3 +38,25 @@ python segment.py \
   --device cuda
 ```
 Run `python segment.py -h` for more information about the arguments.
+
+# Fine-tune XLSR on Persian
+
+To fine-tune XLSR on Persian, clone the repository and install the requirements as explained above. Next, follow these steps:
+
+### 1. Prepare Train and Validation CSVs
+Prepare `train.csv` and `validation.csv` files containing two columns, `path` (name of an audio file) and `sentence` (corresponding transcript).
+
+### 2. Preprocess The Text
+The `train/normalizer.py` script cleans the text in CSV files and saves the results with a `_clean` appended to the name of the input files.
+```
+python train/normalizer.py --csv_path train.csv --delimiter ","         # Generates train_clean.csv
+python train/normalizer.py --csv_path validation.csv --delimiter ","    # Generates validation_clean.csv
+```
+
+### 3. Training The Model
+```
+python train/train.py \
+  --train_csv train_clean.csv \
+  --valid_csv validation_clean.csv \
+  --wav_dir path_to_wavs_dir
+```
