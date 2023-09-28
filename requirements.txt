@@ -1,6 +1,7 @@
-datasets
-transformers
+torch
 torchaudio
+datasets==2.14.6
+transformers==4.16.0
 librosa
 jiwer
 parsivar
@@ -8,3 +9,4 @@ num2fawords
 mutagen
 ctc-segmentation
 matplotlib
+tensorboard
