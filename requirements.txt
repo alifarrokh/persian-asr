@@ -1,7 +1,12 @@
+# Remember to install the following two requirements manually:
+# pip install Cython packaging
+numpy<=1.26.4
+nemo_toolkit[asr]==1.23.0
+huggingface_hub==0.22.0
+transformers==4.40.2
+datasets
 torch
 torchaudio
-datasets==2.14.6
-transformers==4.16.0
 librosa
 jiwer
 parsivar
@@ -10,3 +15,9 @@ mutagen
 ctc-segmentation
 matplotlib
 tensorboard
+pandas
+soundfile
+evaluate
+accelerate
+pyctcdecode
+https://github.com/kpu/kenlm/archive/master.zip
