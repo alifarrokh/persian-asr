@@ -1,0 +1,50 @@
+name: "xls-r-300"
+
+# fraction of an epoch after which evaluation/logging is performed
+eval_ratio: 0.25
+
+base_model:
+  checkpoint: "facebook/wav2vec2-xls-r-300m"
+  sample_rate: 16000
+  freeze_feature_extractor: true
+
+  # the remaining args are directly passed to model instructor
+  attention_dropout: 0.0
+  hidden_dropout: 0.0
+  feat_proj_dropout: 0.0
+  mask_time_prob: 0.05
+  layerdrop: 0.0
+  ctc_loss_reduction: "mean"
+
+dataset:
+  root_path: "../../data/cv-fa-18/" # should contain vocab.json
+  train_manifest: "../../data/cv-fa-18/train_small.jsonl"
+  dev_manifest: "../../data/cv-fa-18/dev_small.jsonl"
+
+  # whether to store processed samples on disk
+  cache_train_samples: true
+  cache_dev_samples: true
+  train_cache_path: "cache/train.arrow"
+  dev_cache_path: "cache/dev.arrow"
+
+# training arguments are directly passed to TrainingArguments
+train:
+  num_train_epochs: 30
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  gradient_accumulation_steps: 4
+
+  warmup_steps: 2000
+  learning_rate: 0.0008
+
+  load_best_model_at_end: true
+  save_total_limit: 1
+  metric_for_best_model: "eval_cer" # eval_wer or eval_cer
+  greater_is_better: false
+
+  dataloader_pin_memory: true
+  dataloader_num_workers: 8
+
+  bf16: true
+
+  report_to: "none"
