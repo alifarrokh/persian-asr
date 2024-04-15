@@ -1,17 +1,21 @@
 """Perpare Persian Common Voice Dataset."""
+from os.path import dirname, abspath
+import sys
+
+# Add the parent directory to sys.path
+sys.path.append(dirname(dirname(abspath(__file__))))
+
 import os
 import re
 import pathlib
-import hashlib
 import string
 import random
-import json
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+from utils import create_jsonl, plot_duration_histogram, save_dataset_info
 
 
-MIN_DURATION = 0.5
+DATASET_DIR = pathlib.Path(__file__).parent.resolve()
+MIN_DURATION = 0.5 # TODO: do not filter samples here
 MAX_DURATION = 11
 SEED = 42
 
@@ -94,45 +98,16 @@ def load_subset_ids(subset_name: str) -> list:
     return ids
 
 
-def create_jsonl(data: list[dict], filename: str):
-    """Save `data` as a jsonl file"""
-    with open(filename, 'w', encoding='utf-8') as f:
-        for item in data:
-            f.write(f'{json.dumps(item)}\n')
-
-
-def load_jsonl(file_path) -> list[dict]:
-    """Load a jsonl file"""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-        lines = [json.loads(l) for l in lines]
-    return lines
-
-
-def load_json(json_path: str):
-    """Load a json file"""
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return data
-
-
-def md5(s: str):
-    """Calculate the MD5 hash of the given string"""
-    return hashlib.md5(s.encode('utf-8')).hexdigest()
-
-
 def prepare_dataset():
-    """ Prepare the Common Voice """
+    """Prepare Common Voice Fa 18"""
     durations = pd.read_csv('dataset/clip_durations.tsv', delimiter='\t', low_memory=False)
     durations = {item['clip']:item['duration[ms]']/1000 for item in durations.to_dict('records')}
 
     validated = pd.read_csv('dataset/validated.tsv', sep='\t', low_memory=False, quoting=3, quotechar='')
     validated = validated[validated['sentence'].apply(lambda s: not bool(re.search(r'[a-zA-Z]+', s)))]
 
-    current_file_path = pathlib.Path(__file__).parent.resolve()
-
     validated['id'] = validated['path'].apply(lambda p: p.replace('.mp3', ''))
-    validated['audio_filepath'] = validated['path'].apply(lambda p: os.path.join(current_file_path, 'dataset/clips', p))
+    validated['audio_filepath'] = validated['path'].apply(lambda p: os.path.join(DATASET_DIR, 'dataset/clips', p))
     validated['duration'] = validated['path'].apply(lambda p: durations[p])
     validated['text'] = validated['sentence'].apply(clean_text)
     validated = validated[['id', 'sentence_id', 'audio_filepath', 'text', 'duration']]
@@ -162,69 +137,7 @@ def prepare_dataset():
     create_jsonl(test_data, 'test.jsonl')
 
 
-def proper_n_bins(x):
-    """ Find the proper number of bins for plotting the histogram of x """
-    q25, q75 = np.percentile(x, [25, 75])
-    bin_width = 2 * (q75 - q25) * len(x) ** (-1/3)
-    bins = round((x.max() - x.min()) / bin_width)
-    return bins
-
-
-def plot_duration_histogram():
-    """ Plot the duration histogram of dataset splits """
-    train_data = load_jsonl('train.jsonl')
-    dev_data = load_jsonl('dev.jsonl')
-    test_data = load_jsonl('test.jsonl')
-
-    train_durations = np.array([item['duration'] for item in train_data])
-    dev_durations = np.array([item['duration'] for item in dev_data])
-    test_durations = np.array([item['duration'] for item in test_data])
-
-    train_bins = proper_n_bins(train_durations)
-    dev_bins = proper_n_bins(dev_durations)
-    test_bins = proper_n_bins(test_durations)
-
-    plt.hist(train_durations, density=True, bins=train_bins, color='blue', alpha=0.4)
-    plt.hist(dev_durations, density=True, bins=dev_bins, color='red', alpha=0.4)
-    plt.hist(test_durations, density=True, bins=test_bins, color='yellow', alpha=0.4)
-
-    plt.legend(['Train', 'Dev', 'Test'])
-    plt.xlabel('Duration (second)')
-    plt.ylabel('Density (%)')
-    plt.title('Audio Duration Histogram')
-    plt.savefig('duration_histogram.png')
-
-
-def save_metadata():
-    """ Extract dataset metadata """
-    format_name = lambda name: name.replace('.jsonl', '')
-    subsets = [f for f in os.listdir('.') if f.endswith('.jsonl')]
-    subsets = {format_name(name): load_jsonl(os.path.join('', name)) for name in subsets}
-
-    metadata = {}
-    for split_name, data in subsets.items():
-        durations = [item['duration'] for item in data]
-        metadata[split_name] = {
-            'samples': len(data),
-            'min(s)': f'{np.min(durations):.1f}',
-            'max(s)': f'{np.max(durations):.1f}',
-            'mean(s)': f'{np.mean(durations):.1f}',
-            'total(h)': f'{sum(durations) / 3600:.1f}',
-        }
-
-    vocab = set(''.join([item['text'] for split in subsets.values() for item in split]))
-    vocab = sorted(list(vocab), key=ord)
-    vocab_dict = {c: idx for idx,c in enumerate(vocab)}
-    with open('vocab.json', 'w', encoding='utf-8') as f:
-        json.dump(vocab_dict, f)
-
-    with open('info.txt', 'w', encoding='utf-8') as f:
-        f.write(str(pd.DataFrame(list(metadata.values()), index=list(metadata.keys()))) + '\n\n')
-        f.write(f'Vocabulary: {len(vocab)}\n')
-        f.write(str(vocab) + '\n')
-
-
 if __name__ == '__main__':
     prepare_dataset()
-    plot_duration_histogram()
-    save_metadata()
+    plot_duration_histogram(DATASET_DIR)
+    save_dataset_info(DATASET_DIR)
