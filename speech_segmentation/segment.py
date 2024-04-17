@@ -59,8 +59,8 @@ assert os.path.isfile(args.metadata), "Input metadata does not exist"
 
 # load model
 vocabulary = get_vocab()
-processor = Wav2Vec2Processor.from_pretrained("./")
-model = Wav2Vec2ForCTC.from_pretrained("./").to(args.device)
+processor = Wav2Vec2Processor.from_pretrained("alifarokh/wav2vec2-xls-r-300m-fa")
+model = Wav2Vec2ForCTC.from_pretrained("alifarokh/wav2vec2-xls-r-300m-fa").to(args.device)
 
 # Model-related helper functions
 def output_frames(n_features):
