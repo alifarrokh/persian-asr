@@ -16,8 +16,12 @@ from transformers import (
 from evaluate import load as load_metric
 import pyctcdecode
 from data_utils import WaveformDataCollator, SampleLoader
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
+API_TOKEN = os.getenv('HUGGING_FACE_TOKEN')
 # Disable future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -57,7 +61,7 @@ if args.lm is not None and not os.path.exists(args.lm):
     raise ValueError(f"Language model {args.lm} does not exist.")
 
 # Create the tokenizer, feature extractor, and wav2vec2 processor
-tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(args.checkpoint)
+tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(args.checkpoint,token=API_TOKEN)
 feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(args.checkpoint)
 processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
 data_collator = WaveformDataCollator(processor=processor, padding=True)
@@ -76,7 +80,7 @@ dataset = dataset.map(sample_loader, remove_columns=dataset.column_names)
 
 # Load the model
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = Wav2Vec2ForCTC.from_pretrained(args.checkpoint).to(DEVICE)
+model = Wav2Vec2ForCTC.from_pretrained(args.checkpoint,token=API_TOKEN).to(DEVICE)
 
 # Prepare the CTC decoder
 vocab_list = list(tokenizer.get_vocab().keys())
